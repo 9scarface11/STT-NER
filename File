@@ -1,0 +1,44 @@
+python -m venv .venv
+source .venv/bin/activate        # or .venv\Scripts\activate on windows
+
+pip install -U pip
+pip install torch torchvision torchaudio         # choose CUDA wheel if you have a GPU
+pip install transformers datasets seqeval jiwer
+pip install accelerate optuna                 # optional for distributed / tuning
+pip install sacremoses tokenizers fsspec       # helpful utilities
+# if you want CRF head:
+pip install pytorch-crf
+
+TRAIN
+
+python src/train.py \
+  --model_name sshleifer/tiny-distilbert-base-cased \
+  --train data/train.jsonl \
+  --dev data/dev.jsonl \
+  --out_dir out \
+  --epochs 4 \
+  --batch_size 16 \
+  --lr 3e-5
+
+Predict 
+
+python src/predict.py --model_dir out --input data/dev.jsonl --output out/dev_pred.json --conf_thresh 0.85
+
+Evaluate
+
+python src/eval_span_f1.py --gold data/dev.jsonl --pred out/dev_pred.json
+
+Quantize
+
+python scripts/export_onnx.py
+
+Export
+
+python scripts/predict_onnx.py --onnx onnx/model.quant.onnx --input data/dev.jsonl --output out/dev_pred_onnx.json --conf_thresh 0.85
+
+Measure
+
+python scripts/measure_latency_onnx.py --onnx onnx/model.quant.onnx --input data/dev.jsonl --runs 200
+
+
+
